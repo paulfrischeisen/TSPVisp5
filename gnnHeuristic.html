@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>Greedy Nearest Neighbor p5.js-Seite mit Verzögerung</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
+</head>
+<body>
+<script>
+    var cities = [];
+    var totalCities = 13;
+    var bestEver = [];
+    var citiesVisited = 0;
+    let frameCounter = 0; // Zähler für die Frames seit der letzten gezeichneten Verbindung
+    let speedSlider; // Slider für die Animationsgeschwindigkeit
+
+    function setup() {
+        createCanvas(800, 600);
+        for (var i = 0; i < totalCities; i++) {
+            var v = createVector(random(width), random(height));
+            cities[i] = v;
+        }
+        bestEver.push(cities[0]);
+        cities.splice(0, 1); // Entferne die erste Stadt aus der Liste, da sie bereits besucht wurde
+
+        // Erstelle den Slider
+        // createSlider(min, max, [value], [step])
+        speedSlider = createSlider(1, 60, 30, 1);
+        speedSlider.position(10, height + 25);
+    }
+
+    function draw() {
+        background(0);
+
+        // Zeichne alle Städte
+        fill(255);
+        cities.forEach(city => {
+            ellipse(city.x, city.y, 8, 8);
+        });
+
+        bestEver.forEach(city => {
+            fill(255);
+            ellipse(city.x, city.y, 8, 8);
+        });
+
+        if (citiesVisited < totalCities - 1 && frameCounter >= speedSlider.value()) {
+            findAndDrawNextClosestCity();
+            frameCounter = 0; // Setze den Frame-Zähler zurück, nachdem eine Verbindung gezeichnet wurde
+        } else {
+            frameCounter++; // Inkrementiere den Frame-Zähler
+        }
+
+        if (citiesVisited === totalCities - 1) {
+            drawFinalConnection();
+            noLoop(); // Stoppe die draw-Funktion, nachdem alle Städte verbunden sind
+        }
+
+        // Zeichne die bisherige Tour
+        stroke(255);
+        strokeWeight(1);
+        noFill();
+        beginShape();
+        bestEver.forEach(city => {
+            vertex(city.x, city.y);
+        });
+        endShape();
+    }
+
+    function findAndDrawNextClosestCity() {
+        let lastCity = bestEver[bestEver.length - 1];
+        let recordDistance = Infinity;
+        let closestCityIndex = -1;
+
+        for (let i = 0; i < cities.length; i++) {
+            let d = dist(lastCity.x, lastCity.y, cities[i].x, cities[i].y);
+            if (d < recordDistance) {
+                recordDistance = d;
+                closestCityIndex = i;
+            }
+        }
+
+        if (closestCityIndex >= 0) {
+            bestEver.push(cities[closestCityIndex]);
+            cities.splice(closestCityIndex, 1); // Entferne die nächste Stadt aus der Liste
+            citiesVisited++;
+        }
+    }
+
+    function drawFinalConnection() {
+        // Verbinde die letzte Stadt mit der ersten, um den Kreis zu schließen
+        stroke(255);
+        strokeWeight(1);
+        line(bestEver[0].x, bestEver[0].y, bestEver[bestEver.length - 1].x, bestEver[bestEver.length - 1].y);
+    }
+</script>
+</body>
+</html>
