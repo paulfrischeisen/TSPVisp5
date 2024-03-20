@@ -8,26 +8,35 @@
 <body>
 <script>
     var cities = [];
-    var totalCities = 6;
+    var totalCities = 7;
 
     var recordDistance;
     var bestEver;
 
     function setup() {
         createCanvas(400, 300);
-        for (var i = 0; i < totalCities + 1; i++) {
+        for (var i = 0; i < totalCities; i++) {
             var v = createVector(random(width), random(height));
-            if (i < totalCities) {
-                cities[i] = v;
-            }else {
-                cities[i] = cities[0];
-            }
+            cities[i] = v;
         }
 
         var d = calcDistance(cities);
         recordDistance = d;
         bestEver = cities.slice();
 
+    }
+
+    function drawTour(tour, strokeC, strokeW) {
+        stroke(strokeC);
+        strokeWeight(strokeW);
+        noFill();
+        beginShape();
+        for (let i = 0; i < tour.length; i++) {
+            vertex(tour[i].x, tour[i].y);
+        }
+        // Zeichne eine Linie zurück zum Startpunkt, um den Kreis zu schließen
+        vertex(tour[0].x, tour[0].y);
+        endShape();
     }
 
     function draw() {
@@ -37,25 +46,11 @@
             ellipse(cities[i].x, cities[i].y, 8, 8);
         }
 
-        stroke(255);
-        strokeWeight(1);
-        noFill();
-        beginShape();
-        for (var i = 0; i < cities.length; i++) {
-            vertex(cities[i].x, cities[i].y);
-        }
-        endShape();
+        // Zeichnet aktuellen Pfad
+        drawTour(cities, color(255), 1);
 
-        stroke(255, 0, 255);
-        strokeWeight(4);
-        noFill();
-        beginShape();
-        for (var i = 0; i < cities.length; i++) {
-            vertex(bestEver[i].x, bestEver[i].y);
-        }
-        endShape();
-
-
+        // Zeichnet die beste jemals gefundene Tour, und kehrt zum Startpunkt zurück
+        drawTour(bestEver, color(255, 0, 255), 4);
 
         var i = floor(random(cities.length));
         var j = floor(random(cities.length));
@@ -81,6 +76,9 @@
             var d = dist(points[i].x, points[i].y, points[i + 1].x, points[i + 1].y);
             sum += d;
         }
+
+        // Addiere die Distanz vom letzten Punkt zurück zum ersten Punkt
+        sum += dist(points[points.length - 1].x, points[points.length - 1].y, points[0].x, points[0].y);
         return sum;
     }
 </script>
