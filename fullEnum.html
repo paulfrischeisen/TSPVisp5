@@ -2,85 +2,181 @@
 <html lang="de">
 <head>
     <meta charset="UTF-8">
-    <title>p5.js-Seite</title>
+    <title>Lexikografische Ordnung - TSP</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
 </head>
 <body>
 <script>
-    var cities = [];
-    var totalCities = 13;
+    let cities = [];
+    let order = [];
+    let totalCities;
+    let totalPermutations;
+    let count = 0;
 
-    var recordDistance;
-    var bestEver;
+    let recordDistance;
+    let bestEver;
+    let distance;
+
+    let citiesInput, submitButton, speedSlider, progressP;
 
     function setup() {
         createCanvas(800, 600);
-        for (var i = 0; i < totalCities; i++) {
-            var v = createVector(random(width), random(height));
+
+        totalCities = 7; // Standardwert
+        for (let i = 0; i < totalCities; i++) {
+            let v = createVector(random(width), random(height));
             cities[i] = v;
+            order[i] = i;
         }
 
-        var d = calcDistance(cities);
+        let d = calcDistance(cities, order);
         recordDistance = d;
-        bestEver = cities.slice();
+        bestEver = order.slice();
 
-    }
+        totalPermutations = factorial(totalCities);
 
-    function drawTour(tour, strokeC, strokeW) {
-        stroke(strokeC);
-        strokeWeight(strokeW);
-        noFill();
-        beginShape();
-        for (let i = 0; i < tour.length; i++) {
-            vertex(tour[i].x, tour[i].y);
-        }
-        // Zeichne eine Linie zurück zum Startpunkt, um den Kreis zu schließen
-        vertex(tour[0].x, tour[0].y);
-        endShape();
+        citiesInput = createInput(totalCities.toString());
+        citiesInput.position(10, height + 40);
+        submitButton = createButton('Städte aktualisieren');
+        submitButton.position(citiesInput.x + citiesInput.width, height + 40);
+        submitButton.mousePressed(updateCities);
+
+        speedSlider = createSlider(1, 100, 1);
+        speedSlider.position(10, height + 10);
+
+        progressP = createP('');
+        progressP.position(10, height + 70);
+
     }
 
     function draw() {
         background(0);
+
+        //Zeichne alle Städte
         fill(255);
-        for (var i = 0; i < cities.length; i++) {
-            ellipse(cities[i].x, cities[i].y, 8, 8);
-        }
+        cities.forEach(city => {
+            ellipse(city.x, city.y, 8, 8);
+        })
 
-        // Zeichnet aktuellen Pfad
-        drawTour(cities, color(255), 1);
+        // Zeichne die beste Tour dicker und in Pink
+        drawTour(cities, bestEver, color(255, 20, 147), 4);
+        // Zeichne jede Tour dünn und in Weiß
+        drawTour(cities, order, 255, 1);
 
-        // Zeichnet die beste jemals gefundene Tour, und kehrt zum Startpunkt zurück
-        drawTour(bestEver, color(255, 0, 255), 4);
-
-        var i = floor(random(cities.length));
-        var j = floor(random(cities.length));
-        swap(cities, i, j);
-
-        var d = calcDistance(cities);
+        let d = calcDistance(cities, order);
         if (d < recordDistance) {
             recordDistance = d;
-            bestEver = cities.slice();
+            bestEver = order.slice();
         }
+
+        nextOrder();
+
+        // Zeichne die beste Tour dick und in Pink
+        // drawTour(cities, bestEver, color(255, 20, 147), 4);
+
+        let percent = 100 * (count / totalPermutations);
+        progressP.html(`Fortschritt: ${percent.toFixed(2)}%`);
+
+        if (count === totalPermutations) {
+            noLoop();
+        }
+
+    }
+
+    function updateCities() {
+        totalCities = parseInt(citiesInput.value());
+        resetCities();
+    }
+
+    function resetCities() {
+        cities = [];
+        order = [];
+        for (let i = 0; i < totalCities; i++) {
+            let v = createVector(random(width), random(height));
+            cities[i] = v;
+            order[i] = i;
+        }
+
+        recordDistance = calcDistance(cities, order);
+        bestEver = order.slice();
+        totalPermutations = factorial(totalCities);
+        count = 0;
+        loop();
     }
 
     function swap(a, i, j) {
-        var temp = a[i];
+        let temp = a[i];
         a[i] = a[j];
         a[j] = temp;
     }
 
-
-    function calcDistance(points) {
-        var sum = 0;
-        for (var i = 0; i < points.length - 1; i++) {
-            var d = dist(points[i].x, points[i].y, points[i + 1].x, points[i + 1].y);
+    function calcDistance(points, order) {
+        let sum = 0;
+        for (let i = 0; i < order.length - 1; i++) {
+            let cityAIndex = order[i];
+            let cityBIndex = order[i + 1];
+            let d = dist(points[cityAIndex].x, points[cityAIndex].y, points[cityBIndex].x, points[cityBIndex].y);
             sum += d;
         }
-
-        // Addiere die Distanz vom letzten Punkt zurück zum ersten Punkt
-        sum += dist(points[points.length - 1].x, points[points.length - 1].y, points[0].x, points[0].y);
         return sum;
+    }
+
+    function factorial(n) {
+        if (n == 0) return 1;
+        let result = 1;
+        for (let i = 1; i <= n; i++) {
+            result *= i;
+        }
+        return result;
+    }
+
+    function nextOrder() {
+        count++;
+
+        // Lexikografische Ordnung
+        // Schritt 1: Finde den größten Index k, sodass order[k] < order[k + 1]
+        let largestI = -1;
+        for (let i = 0; i < order.length - 1; i++) {
+            if (order[i] < order[i + 1]) {
+                largestI = i;
+            }
+        }
+
+        if (largestI == -1) {
+            noLoop();
+            console.log('Finished');
+            return;
+        }
+
+        // Schritt 2: Finde den größten Index l, größer als k, sodass order[k] < order[l]
+        let largestJ = -1;
+        for (let j = 0; j < order.length; j++) {
+            if (order[largestI] < order[j]) {
+                largestJ = j;
+            }
+        }
+
+        // Schritt 3: Tausche order[k] und order[l]
+        swap(order, largestI, largestJ);
+
+        // Schritt 4: Kehre die Reihenfolge von k+1 bis zum Ende um
+        let endArray = order.splice(largestI + 1);
+        endArray.reverse();
+        order = order.concat(endArray);
+    }
+
+    function drawTour(points, order, col, weight) {
+        stroke(col);
+        strokeWeight(weight);
+        noFill();
+        beginShape();
+        for (let i = 0; i < order.length; i++) {
+            let n = order[i];
+            vertex(points[n].x, points[n].y);
+        }
+        endShape(CLOSE);
     }
 </script>
 </body>
 </html>
+

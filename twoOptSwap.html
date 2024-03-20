@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>2-opt Swap Heuristik p5.js-Seite mit Slider</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
+</head>
+<body>
+<script>
+    let cities = [];
+    const totalCities = 200;
+    let bestEver = [];
+    let shortestDistance;
+    let speedSlider;
+    let isOptimizing = false;
+    let i = 1;
+    let k = 2;
+
+    function setup() {
+        createCanvas(800, 600);
+        for (let i = 0; i < totalCities; i++) {
+            const v = createVector(random(width), random(height));
+            cities[i] = v;
+        }
+        bestEver = cities.slice();
+        shortestDistance = calcDistance(cities);
+
+        speedSlider = createSlider(1, 60, 30, 1);
+        speedSlider.position(10, height + 25);
+    }
+
+    function draw() {
+        background(0);
+        fill(255);
+        cities.forEach(city => ellipse(city.x, city.y, 8, 8));
+
+        if (!isOptimizing) {
+            isOptimizing = true;
+            setTimeout(() => {
+                [isOptimizing, i, k] = optimizeRoute(bestEver, i, k);
+            }, 1000 / speedSlider.value());
+        }
+
+        drawTour(bestEver, color(255, 0, 255), 2);
+    }
+
+    function drawTour(tour, strokeC, strokeW) {
+        stroke(strokeC);
+        strokeWeight(strokeW);
+        noFill();
+        beginShape();
+        for (let i = 0; i < tour.length; i++) {
+            vertex(tour[i].x, tour[i].y);
+        }
+        endShape(CLOSE);
+    }
+
+    function calcDistance(points) {
+        let sum = 0;
+        for (let i = 0; i < points.length - 1; i++) {
+            sum += dist(points[i].x, points[i].y, points[i + 1].x, points[i + 1].y);
+        }
+        sum += dist(points[points.length - 1].x, points[0].y, points[0].x, points[points.length - 1].y);
+        return sum;
+    }
+
+    function optimizeRoute(route, i, k) {
+        if (i < route.length - 1) {
+            for (let k = i + 1; k < route.length; k++) {
+                let newRoute = twoOptSwap(route, i, k);
+                let newDistance = calcDistance(newRoute);
+                if (newDistance < shortestDistance) {
+                    bestEver = newRoute.slice();
+                    shortestDistance = newDistance;
+                    return [false, i, k + 1];
+                }
+            }
+            return [false, i + 1, i + 2];
+        } else {
+            noLoop(); // Optimization finished
+            console.log('Optimization completed');
+            return [false, 1, 2];
+        }
+    }
+
+    function twoOptSwap(route, i, k) {
+        let newRoute = route.slice(0, i);
+        let reversedSegment = route.slice(i, k + 1).reverse();
+        let remainingRoute = route.slice(k + 1);
+        newRoute.push(...reversedSegment, ...remainingRoute);
+        return newRoute;
+    }
+</script>
+</body>
+</html>
