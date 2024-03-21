@@ -8,7 +8,7 @@
 <body>
 <script>
     let cities = [];
-    const totalCities = 200;
+    const totalCities = 100;
     let bestEver = [];
     let shortestDistance;
     let speedSlider;
@@ -18,8 +18,10 @@
 
     function setup() {
         createCanvas(800, 600);
+        // Lege einen Abstand fest, der immer eingehalten wird zum Rand des Canvas (für eine schönere Ansicht)
+        let padding = 20;
         for (let i = 0; i < totalCities; i++) {
-            const v = createVector(random(width), random(height));
+            const v = createVector(random(padding, width - padding), random(padding, height - padding));
             cities[i] = v;
         }
         bestEver = cities.slice();
@@ -31,8 +33,6 @@
 
     function draw() {
         background(0);
-        fill(255);
-        cities.forEach(city => ellipse(city.x, city.y, 8, 8));
 
         if (!isOptimizing) {
             isOptimizing = true;
@@ -41,7 +41,11 @@
             }, 1000 / speedSlider.value());
         }
 
-        drawTour(bestEver, color(255, 0, 255), 2);
+        drawTour(bestEver, color(255, 20, 147), 2);
+
+        stroke(255);
+        fill(255);
+        cities.forEach(city => ellipse(city.x, city.y, 8, 8));
     }
 
     function drawTour(tour, strokeC, strokeW) {
