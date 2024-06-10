@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>GA for TSP Visualization</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
+</head>
+<body>
+<label for="populationSize">Population Size:</label>
+<input type="number" id="populationSize" value="100">
+<label for="parentSelection">Parents for Crossover:</label>
+<input type="number" id="parentSelection" value="2" min="2" step="2">
+<button onclick="initializeGA()">Start GA</button>
+<div id="canvasContainer"></div> <!-- Container for p5.js canvases -->
+</body>
+<script>
+    let cities = []; // Array to hold city locations
+    let population = []; // Array to hold the population of routes
+    let fitness = [];
+    let populationSize;
+    let parentSelectionSize;
+
+    function initializeGA() {
+        populationSize = document.getElementById('populationSize').value;
+        parentSelectionSize = document.getElementById('parentSelection').value;
+        // Initialize your cities and population here
+        // Initialize p5 sketches
+    }
+
+    // Example function to generate cities randomly
+    function generateCities(numCities) {
+        let cities = [];
+        for (let i = 0; i < numCities; i++) {
+            cities.push(createVector(random(width), random(height)));
+        }
+        return cities;
+    }
+
+
+
+    function calculateFitness(individual) {
+        let totalDistance = 0;
+        for (let i = 0; i < individual.length - 1; i++) {
+            totalDistance += dist(cities[individual[i]].x, cities[individual[i]].y, cities[individual[i+1]].x, cities[individual[i+1]].y);
+        }
+        totalDistance += dist(cities[individual[individual.length - 1]].x, cities[individual[individual.length - 1]].y, cities[individual[0]].x, cities[individual[0]].y);
+        // Return inverse of distance as fitness (because lower cost (totalDistance) actually is better fitness)
+        // totalDistance + 1 to avoid dividing by 0
+        return 1 / (totalDistance + 1);
+    }
+
+    // Implementation of Rank-Based-Selection for Crossover / Mutation
+
+    // Generate random float-point number between two values
+    function randomFloat(min, max) {
+        return Math.random() * (max - min) + min;
+    }
+
+    // pressure p = 1
+    function rankBasedSelection(populationSize) {
+        // Calculate the sum of ranks for the selection probability formula
+        const sumOfRanks = populationSize * (populationSize + 1) / 2;
+        // Generate a random value within the range of the sum of ranks
+        const randomValue = randomFloat(1, sumOfRanks);
+        // Calculate and return the selected index based on the rank-based selection formula
+        return Math.ceil(populationSize - Math.sqrt(0.25 + 2 * randomValue) - 0.5);
+    }
+
+
+    // OX Crossover function
+    function OX_crossover(parent1, parent2) {
+        const n = parent1.length;
+        // Randomly generate two crossover points for the segment to be copied from parent1
+        let point1 = Math.floor(Math.random() * (n - 2)) + 1;
+        let point2 = Math.floor(Math.random() * (n - 1)) + 1;
+        if (point1 >= point2) {
+            // Ensure point1 is before point2, otherwise you swap them
+            let temp = point2;
+            point2 = point1 + 1;
+            point1 = temp;
+        }
+
+        // Initialize the child with placeholders (-1) and track inserted elements
+        let child = new Array(n).fill(-1);
+        let inserted = new Array(n).fill(false);
+
+        // Copy the segment from parent1 to the child
+        for (let i = point1; i <= point2; i++) {
+            child[i] = parent1[i];
+            inserted[parent1[i]] = true;
+        }
+
+        // last entry in the child
+        let temp = parent1[point2];
+        let start_here_p2 = 0;
+        for (let i = 0; i < n; i++) {
+            if (parent2[i] === temp) {
+                start_here_p2 = i+1;
+            }
+        }
+
+        // How full is the child after copying the first part from parent1
+        let currentIndexChild = point2 - point1;
+        for (let i = 0; i < n; i++) {
+            const parent2index = start_here_p2;
+            const city = parent2[parent2index];
+            // City is not yet inserted in the child
+            if (!inserted[city]) {
+                // insert the city at the right index into the child
+                child[currentIndexChild] = city;
+                // add city to inserted
+                inserted[city] = true;
+                // increment the currentIndexChild for the next city to be entered
+                currentIndexChild++;
+            }
+        }
+
+        // The issue is that there could be entries in parent2 before the point 1, that are not yet in
+        // the child, so we need to take care of these by starting from the beginning of parent2 again
+        // so if the child is not full yet
+        if (child.length < n - 1) {
+            for (let i = 0; i < n; i++) {
+                const city = parent2[i];
+                // If the city is not inserted already
+                if (!inserted[city]) {
+                    child[currentIndexChild] = city;
+                    inserted[city] = true;
+                    currentIndexChild++;
+                }
+                if (child.length === n - 1){
+                    break;
+                }
+            }
+        }
+
+
+
+        // From ChatGPT i did it myself above with some stuff, but it should work
+        // Fill the rest of the child with cities from parent2, skipping already inserted
+        /*
+        let currentIndex = (point2 + 1) % n; // Start from the next position after the copied segment
+        for (let i = 0; i < n; i++) {
+            const parent2Index = (point2 + 1 + i) % n;
+            const city = parent2[parent2Index];
+            if (!inserted[city]) {
+                child[currentIndex] = city;
+                inserted[city] = true;
+                currentIndex = (currentIndex + 1) % n;
+            }
+        }
+
+         */
+
+        return child;
+    }
+
+
+    function selectParents() {
+        // Normalize fitness values
+        let sum = fitness.reduce((acc, val) => acc + val, 0);
+        let normalizedFitness = fitness.map(f => f / sum);
+
+        let parents = [];
+        for (let i = 0; i < parentSelectionSize; i++) {
+            parents.push(pickOne(population, normalizedFitness));
+        }
+        return parents;
+    }
+
+    function mutate(individual, mutationRate) {
+        for (let i = 0; i < individual.length; i++) {
+            if (random(1) < mutationRate) {
+                let indexA = floor(random(individual.length));
+                let indexB = (indexA + 1) % individual.length;
+                swap(individual, indexA, indexB); // Implement swap function
+            }
+        }
+    }
+
+
+</script>
+</html>
