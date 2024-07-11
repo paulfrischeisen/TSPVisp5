@@ -16,6 +16,10 @@
 
 <div id="tourLength">Tour Länge: N/A</div>
 <div id="swapCount">Anzahl der Swaps: 0</div>
+<label for="stepByStep">Schritt-für-Schritt-Visualisierung:</label>
+<input type="checkbox" id="stepByStep">
+<button id="startButton">Optimierung starten</button>
+
 
 <script>
     let cities = [];
@@ -24,6 +28,9 @@
     let xMin, xMax, yMin, yMax;
     let i = 1, k = 2, improved = false;
     let tourLength = 0;
+    let showStepByStep = false;
+    let optimizationStarted = false;
+
 
     const filePaths = {
         'ulysses16.tsp': 'TSPData/ulysses16.tsp',
@@ -33,11 +40,40 @@
     };
 
     document.getElementById('tspSelect').addEventListener('change', handleSelectChange);
+    document.getElementById('startButton').addEventListener('click', startOptimization);
+
 
     function handleSelectChange(event) {
         const selectedFile = event.target.value;
         const filePath = filePaths[selectedFile];
         loadTSPFile(filePath);
+
+        const stepByStepChecked = document.getElementById('stepByStep').checked;
+
+        // Set showStepByStep based on selected file
+        // Because for big Instances this should not be displayed as it takes a longer time to visualize this process.
+        // Just the end Tour is fine here.
+        if (selectedFile === 'ulysses16.tsp' && stepByStepChecked) {
+            showStepByStep = true;
+        } else if (selectedFile === 'bier127.tsp' && stepByStepChecked) {
+            showStepByStep = true;
+        } else {
+            showStepByStep = false;
+        }
+
+        optimizationStarted = false;
+        noLoop(); // Stop the loop until the button is clicked
+    }
+
+    function startOptimization() {
+        if (showStepByStep) {
+            optimizationStarted = true;
+            frameRate(60);
+            loop();
+        } else {
+            performComplete2Opt();
+            draw();
+        }
     }
 
 
@@ -46,7 +82,9 @@
             .then(response => response.text())
             .then(data => {
                 loadCities(data);
-                loop();
+                noLoop();
+                draw();
+                //loop();
             });
     }
 
@@ -97,6 +135,10 @@
         background(255);
         //performStepByStep2Opt();
 
+        if (optimizationStarted && showStepByStep) {
+            performStepByStep2Opt();
+        }
+
         bestEver.forEach(city => {
             let mappedX = map(city.x, xMin, xMax, 20, width - 20);
             let mappedY = map(city.y, yMin, yMax, 20, height - 20);
@@ -115,9 +157,6 @@
         });
         endShape();
 
-        console.log(bestEver);
-
-
         // Draw final connection to close the tour
         if (bestEver.length > 1) {
             let firstCity = bestEver[0];
@@ -128,13 +167,11 @@
             let mappedY2 = map(lastCity.y, yMin, yMax, 20, height - 20);
             line(mappedX1, mappedY1, mappedX2, mappedY2);
         }
-
-
     }
 
     function performStepByStep2Opt() {
 
-        while (i < bestEver.length - 1) {
+        if (i < bestEver.length - 1) {
             // goes up the whole k scale until it reaches the length of the tour (to nodes in the problem)
             // then it enters the first else case and if improved is true, which it is, if a single swap with i being 1 und k switching through every entry in the array
             // then it sets i and k back to 1 and 2 and improved to false. and it does the same thing again.
@@ -172,6 +209,35 @@
             document.getElementById('tourLength').innerText = `Tour Länge: ${tourLength.toFixed(2)}`;
             noLoop();
         }
+    }
+
+
+    function performComplete2Opt() {
+        while (i < bestEver.length - 1) {
+            if (k < bestEver.length) {
+                let newTour = twoOptSwap(bestEver, i, k);
+                if (calculateTourLength(newTour) < calculateTourLength(bestEver)) {
+                    bestEver = newTour;
+                    improved = true;
+                    swapCounter++;
+                    document.getElementById('swapCount').innerText = `Anzahl der Swaps: ${swapCounter}`;
+                    tourLength = calculateTourLength(bestEver);
+                    document.getElementById('tourLength').innerText = `Tour Länge: ${tourLength.toFixed(2)}`;
+                }
+                k++;
+            } else {
+                if (improved) {
+                    improved = false;
+                    i = 1;
+                    k = 2;
+                } else {
+                    i++;
+                    k = i + 1;
+                }
+            }
+        }
+        tourLength = calculateTourLength(bestEver);
+        document.getElementById('tourLength').innerText = `Tour Länge: ${tourLength.toFixed(2)}`;
     }
 
 
