@@ -12,6 +12,9 @@
     <option value="a280.tsp">A 280</option>
     <option value="rl1304.tsp">RL 1304</option>
 </select>
+
+<div id="tourLength">Tour Länge: N/A</div>
+
 <script>
     let cities = [];
     let bestEver = [];
@@ -27,11 +30,13 @@
 
     document.getElementById('tspSelect').addEventListener('change', handleSelectChange);
 
+
     function handleSelectChange(event) {
         const selectedFile = event.target.value;
         const filePath = filePaths[selectedFile];
         loadTSPFile(filePath);
     }
+
 
     function loadTSPFile(filepath) {
         fetch(filepath)
@@ -46,6 +51,7 @@
         let lines = data.trim().split('\n');
         let coordSection = false;
         cities = [];
+        unvisitedCities = [];
         for (let line of lines) {
             line = line.trim();
             if (line === 'NODE_COORD_SECTION') {
@@ -59,9 +65,10 @@
             let parts = line.split(/\s+/);
             let v = createVector(parseFloat(parts[1]), parseFloat(parts[2]));
             cities.push(v);
+            unvisitedCities.push(v);
         }
         bestEver = [cities[0]];
-        cities.splice(0, 1);
+        unvisitedCities.splice(0, 1);  // Remove the first city from the unvisited list
         citiesVisited = 0;
         calculateBounds();
     }
@@ -74,7 +81,7 @@
     }
 
     function setupSketch() {
-        createCanvas(800, 600);
+        createCanvas(1200, 800);
         background(255);
         loop();
     }
@@ -91,30 +98,34 @@
         cities.forEach(city => {
             let mappedX = map(city.x, xMin, xMax, 20, width - 20);
             let mappedY = map(city.y, yMin, yMax, 20, height - 20);
-            ellipse(mappedX, mappedY, 8, 8);
+            ellipse(mappedX, mappedY, 4, 4);
         });
 
         bestEver.forEach(city => {
             let mappedX = map(city.x, xMin, xMax, 20, width - 20);
             let mappedY = map(city.y, yMin, yMax, 20, height - 20);
             fill(0);
-            ellipse(mappedX, mappedY, 8, 8);
+            ellipse(mappedX, mappedY, 4, 4);
         });
 
-        if (citiesVisited < cities.length && frameCounter >= 30) {  // Removed the speed slider
+
+        if (unvisitedCities.length > 0 && frameCounter >= 10) {
             findAndDrawNextClosestCity();
             frameCounter = 0;
         } else {
             frameCounter++;
         }
 
-        if (citiesVisited === cities.length) {
+        if (unvisitedCities.length === 0) {
             drawFinalConnection();
+            let tourLength = calculateTourLength(bestEver);
+            document.getElementById('tourLength').innerText = `Tour Länge: ${tourLength.toFixed(2)}`;
             noLoop();
         }
 
+
         stroke(0);
-        strokeWeight(1);
+        strokeWeight(2);
         noFill();
         beginShape();
         bestEver.forEach(city => {
@@ -130,8 +141,8 @@
         let recordDistance = Infinity;
         let closestCityIndex = -1;
 
-        for (let i = 0; i < cities.length; i++) {
-            let d = dist(lastCity.x, lastCity.y, cities[i].x, cities[i].y);
+        for (let i = 0; i < unvisitedCities.length; i++) {
+            let d = dist(lastCity.x, lastCity.y, unvisitedCities[i].x, unvisitedCities[i].y);
             if (d < recordDistance) {
                 recordDistance = d;
                 closestCityIndex = i;
@@ -139,15 +150,15 @@
         }
 
         if (closestCityIndex >= 0) {
-            bestEver.push(cities[closestCityIndex]);
-            cities.splice(closestCityIndex, 1);
+            bestEver.push(unvisitedCities[closestCityIndex]);
+            unvisitedCities.splice(closestCityIndex, 1);
             citiesVisited++;
         }
     }
 
     function drawFinalConnection() {
         stroke(0);
-        strokeWeight(1);
+        strokeWeight(2);
         let firstCity = bestEver[0];
         let lastCity = bestEver[bestEver.length - 1];
         let mappedX1 = map(firstCity.x, xMin, xMax, 20, width - 20);
@@ -162,7 +173,7 @@
         for (let i = 0; i < tour.length - 1; i++) {
             totalDist += dist(tour[i].x, tour[i].y, tour[i + 1].x, tour[i + 1].y);
         }
-        totalDist += dist(tour[tour.length - 1].x, tour[0].x, tour[0].y);
+        totalDist += dist(tour[tour.length - 1].x, tour[tour.length - 1].y, tour[0].x, tour[0].y);
         return totalDist;
     }
 </script>
