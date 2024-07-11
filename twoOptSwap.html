@@ -167,6 +167,9 @@
             let mappedY2 = map(lastCity.y, yMin, yMax, 20, height - 20);
             line(mappedX1, mappedY1, mappedX2, mappedY2);
         }
+
+        tourLength = calculateTourLength(bestEver);
+        document.getElementById('tourLength').innerText = `Tour Länge: ${tourLength.toFixed(2)}`;
     }
 
     function performStepByStep2Opt() {
