@@ -6,17 +6,12 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
 </head>
 <body>
-<select id="tspSelect">
+<label for="tspSelect"></label><select id="tspSelect">
     <option value="" disabled selected>Wähle eine TSP Datei</option>
     <option value="ulysses16.tsp">Ulysses 16</option>
     <option value="bier127.tsp">Bier 127</option>
     <option value="a280.tsp">A 280</option>
     <option value="rl1304.tsp">RL 1304</option>
-</select>
-<select id="modeSelect">
-    <option value="" disabled selected>Wähle einen Modus</option>
-    <option value="step">Schritt-für-Schritt</option>
-    <option value="fast">Schnelle Berechnung</option>
 </select>
 
 <div id="tourLength">Tour Länge: N/A</div>
@@ -28,6 +23,7 @@
     let swapCounter = 0;
     let xMin, xMax, yMin, yMax;
     let i = 1, k = 2, improved = false;
+    let tourLength = 0;
 
     const filePaths = {
         'ulysses16.tsp': 'TSPData/ulysses16.tsp',
@@ -37,7 +33,6 @@
     };
 
     document.getElementById('tspSelect').addEventListener('change', handleSelectChange);
-    document.getElementById('modeSelect').addEventListener('change', handleModeChange);
 
     function handleSelectChange(event) {
         const selectedFile = event.target.value;
@@ -45,16 +40,13 @@
         loadTSPFile(filePath);
     }
 
-    function handleModeChange(event) {
-        setupSketch();
-    }
 
     function loadTSPFile(filepath) {
         fetch(filepath)
             .then(response => response.text())
             .then(data => {
                 loadCities(data);
-                setupSketch();
+                loop();
             });
     }
 
@@ -85,33 +77,25 @@
     }
 
     function calculateBounds() {
-        xMin = Math.min(...cities.map(city => city.x));
-        xMax = Math.max(...cities.map(city => city.x));
-        yMin = Math.min(...cities.map(city => city.y));
-        yMax = Math.max(...cities.map(city => city.y));
-    }
-
-    function setupSketch() {
-        createCanvas(1200, 800);
-        background(255);
-        loop();
+        if (cities.length > 0){
+            xMin = Math.min(...cities.map(city => city.x));
+            xMax = Math.max(...cities.map(city => city.x));
+            yMin = Math.min(...cities.map(city => city.y));
+            yMax = Math.max(...cities.map(city => city.y));
+        }else {
+            console.error("No cities loaded!")
+        }
     }
 
     function setup() {
-        // Initial setup to create canvas, called once
-        noLoop();  // No looping until file is loaded
+        createCanvas(1200, 800);
+        background(255);
     }
 
     function draw() {
-        let mode = document.getElementById('modeSelect').value;
-
-        if (mode === 'step') {
-            performStepByStep2Opt();
-        } else if (mode === 'fast') {
-            performFast2Opt();
-        }
-
         background(255);
+        performStepByStep2Opt();
+
 
         fill(0);
         cities.forEach(city => {
@@ -151,6 +135,7 @@
     }
 
     function performStepByStep2Opt() {
+
         while (i < bestEver.length - 1) {
             if (k < bestEver.length) {
                 let newTour = twoOptSwap(bestEver, i, k);
@@ -159,7 +144,8 @@
                     improved = true;
                     swapCounter++;
                     document.getElementById('swapCount').innerText = `Anzahl der Swaps: ${swapCounter}`;
-                    console.log(`Swap ${swapCounter}: Tour Länge: ${calculateTourLength(bestEver).toFixed(2)}`);
+                    tourLength = calculateTourLength(bestEver);
+                    document.getElementById('tourLength').innerText = `Tour Länge: ${tourLength.toFixed(2)}`;
                 }
                 k++;
             } else {
@@ -175,33 +161,12 @@
         }
 
         if (i >= bestEver.length - 1) {
-            let tourLength = calculateTourLength(bestEver);
+            tourLength = calculateTourLength(bestEver);
             document.getElementById('tourLength').innerText = `Tour Länge: ${tourLength.toFixed(2)}`;
             noLoop();
         }
     }
 
-    function performFast2Opt() {
-        let improved = true;
-        while (improved) {
-            improved = false;
-            for (let i = 1; i < bestEver.length - 1; i++) {
-                for (let k = i + 1; k < bestEver.length; k++) {
-                    let newTour = twoOptSwap(bestEver, i, k);
-                    if (calculateTourLength(newTour) < calculateTourLength(bestEver)) {
-                        bestEver = newTour;
-                        improved = true;
-                        swapCounter++;
-                        document.getElementById('swapCount').innerText = `Anzahl der Swaps: ${swapCounter}`;
-                        console.log(`Swap ${swapCounter}: Tour Länge: ${calculateTourLength(bestEver).toFixed(2)}`);
-                    }
-                }
-            }
-        }
-        let tourLength = calculateTourLength(bestEver);
-        document.getElementById('tourLength').innerText = `Tour Länge: ${tourLength.toFixed(2)}`;
-        noLoop();
-    }
 
     function twoOptSwap(tour, i, k) {
         let newTour = tour.slice(0, i).concat(tour.slice(i, k + 1).reverse()).concat(tour.slice(k + 1));
@@ -213,9 +178,11 @@
         for (let i = 0; i < tour.length - 1; i++) {
             totalDist += dist(tour[i].x, tour[i].y, tour[i + 1].x, tour[i + 1].y);
         }
-        totalDist += dist(tour[tour.length - 1].x, tour[tour.length - 1].y, tour[0].x, tour[0].y); // Close the tour
+        // Close the tour
+        totalDist += dist(tour[tour.length - 1].x, tour[tour.length - 1].y, tour[0].x, tour[0].y);
         return totalDist;
     }
+
 </script>
 </body>
 </html>
