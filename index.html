@@ -2,13 +2,72 @@
 <html lang="de">
 <head>
     <meta charset="UTF-8">
-    <title>Startseite</title>
+    <title>TSP Visualisierung - Auswahl der Heuristiken</title>
+    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            padding: 20px;
+            background-color: #f8f9fa;
+        }
+        .algorithm-card {
+            margin-bottom: 20px;
+        }
+        .algorithm-card h3 {
+            margin-bottom: 15px;
+        }
+    </style>
 </head>
 <body>
-<h1>Willkommen</h1>
-<p>Klicke auf die untenstehenden Links, um zu verschiedenen Visualisierungen des TSP zu gelangen.</p>
-<a href="fullEnum.html">vollständigen Enumeration mit Lexikografischer Ordnung</a>
-<a href="gnnHeuristic.html">Greedy Nearest Neighbor Heuristic</a>
-<a href="twoOptSwap.html">Two-Opt swap Heuristic</a>
+<div class="container">
+    <h1 class="text-center">Traveling Salesman Problem Visualisierung</h1>
+    <p class="text-center">Wähle eine Heuristik zur Visualisierung des Travelling Salesman Problems (TSP). Jede Heuristik bietet verschiedene Ansätze zur Lösung des Problems. Klicke auf einen Algorithmus, um mehr darüber zu erfahren und mit verschiedenen TSP-Instanzen zu experimentieren.</p>
+
+    <div class="row">
+        <div class="col-md-6 algorithm-card">
+            <div class="card">
+                <div class="card-body">
+                    <h3>Greedy Nearest Neighbor (GNN)</h3>
+                    <p>Der Greedy Nearest Neighbor-Algorithmus ist eine einfache Heuristik, die immer den nächsten unbesuchten Knoten wählt. Er ist schnell, aber nicht immer optimal.</p>
+                    <p><strong>Beispielinstanzen:</strong> ulysses16.tsp, berlin52.tsp, bier127.tsp, a280.tsp, rl1304.tsp</p>
+                    <a href="gnnHeuristic.html" class="btn btn-primary" target="_blank">GNN starten</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6 algorithm-card">
+            <div class="card">
+                <div class="card-body">
+                    <h3>Two-Opt</h3>
+                    <p>Der Two-Opt-Algorithmus verbessert eine bestehende Tour durch das Vertauschen von zwei Kanten, um die Gesamtlänge der Tour zu reduzieren.</p>
+                    <p><strong>Beispielinstanzen:</strong> ulysses16.tsp, berlin52.tsp, bier127.tsp, a280.tsp, rl1304.tsp</p>
+                    <a href="twoOptSwap.html" class="btn btn-primary" target="_blank">Two-Opt starten</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6 algorithm-card">
+            <div class="card">
+                <div class="card-body">
+                    <h3>Three-Opt</h3>
+                    <p>Der Three-Opt-Algorithmus verbessert eine bestehende Tour durch das Vertauschen von drei Kanten, was oft zu besseren Ergebnissen führt als der Two-Opt-Algorithmus.</p>
+                    <p><strong>Beispielinstanzen:</strong> ulysses16.tsp, berlin52.tsp, bier127.tsp, a280.tsp, rl1304.tsp</p>
+                    <a href="threeOptSwap.html" class="btn btn-primary" target="_blank">Three-Opt starten</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6 algorithm-card">
+            <div class="card">
+                <div class="card-body">
+                    <h3>Genetischer Algorithmus</h3>
+                    <p>Der genetische Algorithmus ist eine Metaheuristik, die Prinzipien der natürlichen Selektion nutzt, um nach und nach bessere Lösungen zu finden.</p>
+                    <p><strong>Beispielinstanzen:</strong> ulysses16.tsp, berlin52.tsp, bier127.tsp, a280.tsp, rl1304.tsp</p>
+                    <a href="geneticAlgorithm.html" class="btn btn-primary" target="_blank">Genetischen Algorithmus starten</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
 </body>
 </html>

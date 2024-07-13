@@ -4,23 +4,80 @@
   <meta charset="UTF-8">
   <title>Travelling Salesman Problem Visualisierung - Three-Opt</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body {
+      padding: 20px;
+    }
+    #controls {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      max-width: 300px;
+      margin-right: 20px;
+    }
+    #canvas-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    #chart-container {
+      width: 1000px;
+      height: 600px;
+    }
+    #canvas-holder {
+      width: 1000px;
+      height: 800px;
+    }
+  </style>
 </head>
 <body>
-<label for="tspSelect">Wähle eine TSP Datei:</label>
-<select id="tspSelect">
-  <option value="" disabled selected>Wähle eine TSP Datei</option>
-  <option value="ulysses16.tsp">Ulysses 16</option>
-  <option value="berlin52.tsp">Berlin 52</option>
-  <option value="bier127.tsp">Bier 127</option>
-  <option value="a280.tsp">A 280</option>
-  <option value="rl1304.tsp">RL 1304</option>
-</select>
+<div class="container-fluid">
+  <h1>TSP Visualisierung - Three-Opt</h1>
+  <div class="row">
+    <div class="col-12 col-md-2">
+      <div id="controls" class="form-group">
+        <label for="tspSelect">Wähle eine TSP Datei:</label>
+        <select id="tspSelect" class="form-control">
+          <option value="" disabled selected>Wähle eine TSP Datei</option>
+          <option value="ulysses16.tsp">Ulysses 16</option>
+          <option value="berlin52.tsp">Berlin 52</option>
+          <option value="bier127.tsp">Bier 127</option>
+          <option value="a280.tsp">A 280</option>
+          <option value="rl1304.tsp">RL 1304</option>
+        </select>
 
-<div id="tourLength">Tour Länge: N/A</div>
-<div id="swapCount">Anzahl der Swaps: 0</div>
-<label for="stepByStep">Schritt-für-Schritt-Visualisierung:</label>
-<input type="checkbox" id="stepByStep">
-<button id="startButton">3-Opt Optimierung starten</button>
+        <div class="form-check mt-3">
+          <label for="stepByStep" class="form-check-label">Schritt-für-Schritt-Visualisierung:</label>
+          <input type="checkbox" id="stepByStep" class="form-check-input ml-2">
+        </div>
+
+        <button id="startButton" class="btn btn-primary mt-3">3-Opt Optimierung starten</button>
+
+        <div id="info" class="mt-3">
+          <div id="tourLength">Tour Länge: N/A</div>
+          <div id="swapCount">Anzahl der Swaps: 0</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-md-6" id="canvas-container">
+      <div id="canvas-holder">
+        <script>
+          function setup() {
+            let canvas = createCanvas(1000, 800);
+            canvas.parent('canvas-holder');
+            background(255);
+            noLoop();
+          }
+        </script>
+      </div>
+    </div>
+    <div class="col-12 col-md-4" id="chart-container">
+      <canvas id="tourLengthChart"></canvas>
+    </div>
+  </div>
+</div>
 
 <script>
   let cities = [];
@@ -31,6 +88,9 @@
   let tourLength = 0;
   let showStepByStep = false;
   let optimizationStarted = false;
+  let tourLengthData = [];
+  let swapCountData = [];
+  let tourLengthChart;
 
   const filePaths = {
     'ulysses16.tsp': 'TSPData/ulysses16.tsp',
@@ -47,17 +107,20 @@
     const selectedFile = event.target.value;
     const filePath = filePaths[selectedFile];
     loadTSPFile(filePath);
-
-    const stepByStepChecked = document.getElementById('stepByStep').checked;
-    showStepByStep = stepByStepChecked;
-
+    showStepByStep = document.getElementById('stepByStep').checked;
     optimizationStarted = false;
-    noLoop(); // Stop the loop until the button is clicked
+    tourLengthData = [];
+    swapCountData = [];
+    if (tourLengthChart) {
+      tourLengthChart.destroy();
+    }
+    setupChart();
+    noLoop();
   }
 
   function startOptimization() {
+    optimizationStarted = true;
     if (showStepByStep) {
-      optimizationStarted = true;
       frameRate(60);
       loop();
     } else {
@@ -104,25 +167,55 @@
   }
 
   function calculateBounds() {
-    if (cities.length > 0) {
-      xMin = Math.min(...cities.map(city => city.x));
-      xMax = Math.max(...cities.map(city => city.x));
-      yMin = Math.min(...cities.map(city => city.y));
-      yMax = Math.max(...cities.map(city => city.y));
-    } else {
-      console.error("No cities loaded!");
-    }
+    xMin = Math.min(...cities.map(city => city.x));
+    xMax = Math.max(...cities.map(city => city.x));
+    yMin = Math.min(...cities.map(city => city.y));
+    yMax = Math.max(...cities.map(city => city.y));
   }
 
-  function setup() {
-    createCanvas(1200, 800);
-    background(255);
-    noLoop();
+  function setupChart() {
+    const ctx = document.getElementById('tourLengthChart').getContext('2d');
+    tourLengthChart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: swapCountData,
+        datasets: [{
+          label: 'Tour Länge',
+          data: tourLengthData,
+          borderColor: 'rgba(75, 192, 192, 1)',
+          fill: false
+        }]
+      },
+      options: {
+        responsive: true,
+        scales: {
+          x: {
+            display: true,
+            title: {
+              display: true,
+              text: 'Anzahl der Swaps'
+            }
+          },
+          y: {
+            display: true,
+            title: {
+              display: true,
+              text: 'Tour Länge'
+            }
+          }
+        }
+      }
+    });
+  }
+
+  function updateChart() {
+    tourLengthData.push(tourLength);
+    swapCountData.push(swapCounter);
+    tourLengthChart.update();
   }
 
   function draw() {
     background(255);
-
     if (optimizationStarted && showStepByStep) {
       performStepByStep3Opt();
     }
@@ -145,7 +238,6 @@
     });
     endShape();
 
-    // Draw final connection to close the tour
     if (bestEver.length > 1) {
       let firstCity = bestEver[0];
       let lastCity = bestEver[bestEver.length - 1];
@@ -159,6 +251,7 @@
     tourLength = calculateTourLength(bestEver);
     document.getElementById('tourLength').innerText = `Tour Länge: ${tourLength.toFixed(2)}`;
     document.getElementById('swapCount').innerText = `Anzahl der Swaps: ${swapCounter}`;
+    updateChart();
   }
 
   function performStepByStep3Opt() {
