@@ -9,6 +9,7 @@
 <label for="tspSelect"></label><select id="tspSelect">
     <option value="" disabled selected>Wähle eine TSP Datei</option>
     <option value="ulysses16.tsp">Ulysses 16</option>
+    <option value="berlin52.tsp">Berlin 52</option>
     <option value="bier127.tsp">Bier 127</option>
     <option value="a280.tsp">A 280</option>
     <option value="rl1304.tsp">RL 1304</option>
@@ -34,6 +35,7 @@
 
     const filePaths = {
         'ulysses16.tsp': 'TSPData/ulysses16.tsp',
+        'berlin52.tsp': 'TSPData/berlin52.tsp',
         'bier127.tsp': 'TSPData/bier127.tsp',
         'a280.tsp': 'TSPData/a280.tsp',
         'rl1304.tsp': 'TSPData/rl1304.tsp'
@@ -53,9 +55,7 @@
         // Set showStepByStep based on selected file
         // Because for big Instances this should not be displayed as it takes a longer time to visualize this process.
         // Just the end Tour is fine here.
-        if (selectedFile === 'ulysses16.tsp' && stepByStepChecked) {
-            showStepByStep = true;
-        } else if (selectedFile === 'bier127.tsp' && stepByStepChecked) {
+        if (stepByStepChecked) {
             showStepByStep = true;
         } else {
             showStepByStep = false;
@@ -68,7 +68,7 @@
     function startOptimization() {
         if (showStepByStep) {
             optimizationStarted = true;
-            frameRate(60);
+            frameRate(1000);
             loop();
         } else {
             performComplete2Opt();
@@ -84,7 +84,6 @@
                 loadCities(data);
                 noLoop();
                 draw();
-                //loop();
             });
     }
 
@@ -133,7 +132,6 @@
 
     function draw() {
         background(255);
-        //performStepByStep2Opt();
 
         if (optimizationStarted && showStepByStep) {
             performStepByStep2Opt();
@@ -170,6 +168,7 @@
 
         tourLength = calculateTourLength(bestEver);
         document.getElementById('tourLength').innerText = `Tour Länge: ${tourLength.toFixed(2)}`;
+        document.getElementById('swapCount').innerText = `Anzahl der Swaps: ${swapCounter}`;
     }
 
     function performStepByStep2Opt() {

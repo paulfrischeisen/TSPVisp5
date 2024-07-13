@@ -1,182 +1,371 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="de">
 <head>
     <meta charset="UTF-8">
-    <title>GA for TSP Visualization</title>
+    <title>TSP Visualisierung - Genetischer Algorithmus</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            padding: 20px;
+        }
+        #controls {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            max-width: 300px;
+            margin-right: 20px;
+        }
+        #canvas-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        #chart-container {
+            width: 1000px;
+            height: 400px;
+        }
+        #canvas-holder {
+            width: 1000px;
+            height: 800px;
+        }
+    </style>
 </head>
 <body>
-<label for="populationSize">Population Size:</label>
-<input type="number" id="populationSize" value="100">
-<label for="parentSelection">Parents for Crossover:</label>
-<input type="number" id="parentSelection" value="2" min="2" step="2">
-<button onclick="initializeGA()">Start GA</button>
-<div id="canvasContainer"></div> <!-- Container for p5.js canvases -->
-</body>
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-3">
+            <div id="controls" class="form-group">
+                <label for="tspSelect">Wähle eine TSP Datei:</label>
+                <select id="tspSelect" class="form-control">
+                    <option value="" disabled selected>Wähle eine TSP Datei</option>
+                    <option value="ulysses16.tsp">Ulysses 16</option>
+                    <option value="berlin52.tsp">Berlin 52</option>
+                    <option value="bier127.tsp">Bier 127</option>
+                    <option value="a280.tsp">A 280</option>
+                    <option value="rl1304.tsp">RL 1304</option>
+                </select>
+
+                <label for="popSizeInput">Populationsgröße:</label>
+                <input type="number" id="popSizeInput" class="form-control" value="100">
+
+                <label for="mutationRateInput">Mutationsrate:</label>
+                <input type="number" id="mutationRateInput" class="form-control" step="0.01" value="0.01">
+
+                <div class="form-check">
+                    <label for="stepByStep" class="form-check-label">Schritt-für-Schritt-Visualisierung:</label>
+                    <input type="checkbox" id="stepByStep" class="form-check-input ml-2">
+                </div>
+
+                <button id="startButton" class="btn btn-primary mt-3">GA Optimierung starten</button>
+
+                <div id="info" class="mt-3">
+                    <div id="tourLength">Tour Länge: N/A</div>
+                    <div id="generationCount">Anzahl der Generationen: 0</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-9" id="canvas-container">
+            <div id="canvas-holder">
+                <script>
+                    function setup() {
+                        let canvas = createCanvas(1000, 800);
+                        canvas.parent('canvas-holder');
+                        background(255);
+                        noLoop();
+                    }
+                </script>
+            </div>
+            <div id="chart-container" class="mt-4">
+                <canvas id="tourLengthChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
-    let cities = []; // Array to hold city locations
-    let population = []; // Array to hold the population of routes
-    let fitness = [];
-    let populationSize;
-    let parentSelectionSize;
+    let cities = [];
+    let bestEver = [];
+    let population = [];
+    let popSize = 100;
+    let mutationRate = 0.01;
+    let generations = 0;
+    let xMin, xMax, yMin, yMax;
+    let tourLength = 0;
+    let showStepByStep = false;
+    let optimizationStarted = false;
+    let tourLengthData = [];
+    let generationData = [];
+    let tourLengthChart;
+
+    const filePaths = {
+        'ulysses16.tsp': 'TSPData/ulysses16.tsp',
+        'berlin52.tsp': 'TSPData/berlin52.tsp',
+        'bier127.tsp': 'TSPData/bier127.tsp',
+        'a280.tsp': 'TSPData/a280.tsp',
+        'rl1304.tsp': 'TSPData/rl1304.tsp'
+    };
+
+    document.getElementById('tspSelect').addEventListener('change', handleSelectChange);
+    document.getElementById('startButton').addEventListener('click', startOptimization);
+    document.getElementById('popSizeInput').addEventListener('change', updatePopSize);
+    document.getElementById('mutationRateInput').addEventListener('change', updateMutationRate);
+
+    function handleSelectChange(event) {
+        const selectedFile = event.target.value;
+        const filePath = filePaths[selectedFile];
+        loadTSPFile(filePath);
+
+        const stepByStepChecked = document.getElementById('stepByStep').checked;
+        showStepByStep = stepByStepChecked;
+
+        optimizationStarted = false;
+        noLoop(); // Stop the loop until the button is clicked
+    }
+
+    function startOptimization() {
+        if (showStepByStep) {
+            optimizationStarted = true;
+            frameRate(60);
+            loop();
+        } else {
+            performCompleteGA();
+            draw();
+        }
+    }
+
+    function updatePopSize() {
+        popSize = document.getElementById('popSizeInput').value;
+    }
+
+    function updateMutationRate() {
+        mutationRate = document.getElementById('mutationRateInput').value;
+    }
+
+    function loadTSPFile(filepath) {
+        fetch(filepath)
+            .then(response => response.text())
+            .then(data => {
+                loadCities(data);
+                noLoop();
+                draw();
+            });
+    }
+
+    function loadCities(data) {
+        let lines = data.trim().split('\n');
+        let coordSection = false;
+        cities = [];
+        for (let line of lines) {
+            line = line.trim();
+            if (line === 'NODE_COORD_SECTION') {
+                coordSection = true;
+                continue;
+            }
+            if (line === 'EOF' || line === '' || !coordSection) {
+                coordSection = false;
+                continue;
+            }
+            let parts = line.split(/\s+/);
+            let v = createVector(parseFloat(parts[1]), parseFloat(parts[2]));
+            cities.push(v);
+        }
+        initializeGA();
+        calculateBounds();
+    }
 
     function initializeGA() {
-        populationSize = document.getElementById('populationSize').value;
-        parentSelectionSize = document.getElementById('parentSelection').value;
-        // Initialize your cities and population here
-        // Initialize p5 sketches
+        population = [];
+        for (let i = 0; i < popSize; i++) {
+            let tour = shuffle(cities.slice());
+            population.push(tour);
+        }
+        bestEver = population[0];
+        generations = 0;
+        tourLengthData = [];
+        generationData = [];
+        if (tourLengthChart) {
+            tourLengthChart.destroy();
+        }
+        setupChart();
     }
 
-    // Example function to generate cities randomly
-    function generateCities(numCities) {
-        let cities = [];
-        for (let i = 0; i < numCities; i++) {
-            cities.push(createVector(random(width), random(height)));
+    function calculateBounds() {
+        if (cities.length > 0) {
+            xMin = Math.min(...cities.map(city => city.x));
+            xMax = Math.max(...cities.map(city => city.x));
+            yMin = Math.min(...cities.map(city => city.y));
+            yMax = Math.max(...cities.map(city => city.y));
+        } else {
+            console.error("No cities loaded!");
         }
-        return cities;
     }
 
-
-
-    function calculateFitness(individual) {
-        let totalDistance = 0;
-        for (let i = 0; i < individual.length - 1; i++) {
-            totalDistance += dist(cities[individual[i]].x, cities[individual[i]].y, cities[individual[i+1]].x, cities[individual[i+1]].y);
-        }
-        totalDistance += dist(cities[individual[individual.length - 1]].x, cities[individual[individual.length - 1]].y, cities[individual[0]].x, cities[individual[0]].y);
-        // Return inverse of distance as fitness (because lower cost (totalDistance) actually is better fitness)
-        // totalDistance + 1 to avoid dividing by 0
-        return 1 / (totalDistance + 1);
-    }
-
-    // Implementation of Rank-Based-Selection for Crossover / Mutation
-
-    // Generate random float-point number between two values
-    function randomFloat(min, max) {
-        return Math.random() * (max - min) + min;
-    }
-
-    // pressure p = 1
-    function rankBasedSelection(populationSize) {
-        // Calculate the sum of ranks for the selection probability formula
-        const sumOfRanks = populationSize * (populationSize + 1) / 2;
-        // Generate a random value within the range of the sum of ranks
-        const randomValue = randomFloat(1, sumOfRanks);
-        // Calculate and return the selected index based on the rank-based selection formula
-        return Math.ceil(populationSize - Math.sqrt(0.25 + 2 * randomValue) - 0.5);
-    }
-
-
-    // OX Crossover function
-    function OX_crossover(parent1, parent2) {
-        const n = parent1.length;
-        // Randomly generate two crossover points for the segment to be copied from parent1
-        let point1 = Math.floor(Math.random() * (n - 2)) + 1;
-        let point2 = Math.floor(Math.random() * (n - 1)) + 1;
-        if (point1 >= point2) {
-            // Ensure point1 is before point2, otherwise you swap them
-            let temp = point2;
-            point2 = point1 + 1;
-            point1 = temp;
-        }
-
-        // Initialize the child with placeholders (-1) and track inserted elements
-        let child = new Array(n).fill(-1);
-        let inserted = new Array(n).fill(false);
-
-        // Copy the segment from parent1 to the child
-        for (let i = point1; i <= point2; i++) {
-            child[i] = parent1[i];
-            inserted[parent1[i]] = true;
-        }
-
-        // last entry in the child
-        let temp = parent1[point2];
-        let start_here_p2 = 0;
-        for (let i = 0; i < n; i++) {
-            if (parent2[i] === temp) {
-                start_here_p2 = i+1;
-            }
-        }
-
-        // How full is the child after copying the first part from parent1
-        let currentIndexChild = point2 - point1;
-        for (let i = 0; i < n; i++) {
-            const parent2index = start_here_p2;
-            const city = parent2[parent2index];
-            // City is not yet inserted in the child
-            if (!inserted[city]) {
-                // insert the city at the right index into the child
-                child[currentIndexChild] = city;
-                // add city to inserted
-                inserted[city] = true;
-                // increment the currentIndexChild for the next city to be entered
-                currentIndexChild++;
-            }
-        }
-
-        // The issue is that there could be entries in parent2 before the point 1, that are not yet in
-        // the child, so we need to take care of these by starting from the beginning of parent2 again
-        // so if the child is not full yet
-        if (child.length < n - 1) {
-            for (let i = 0; i < n; i++) {
-                const city = parent2[i];
-                // If the city is not inserted already
-                if (!inserted[city]) {
-                    child[currentIndexChild] = city;
-                    inserted[city] = true;
-                    currentIndexChild++;
-                }
-                if (child.length === n - 1){
-                    break;
+    function setupChart() {
+        const ctx = document.getElementById('tourLengthChart').getContext('2d');
+        tourLengthChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: generationData,
+                datasets: [{
+                    label: 'Tour Länge',
+                    data: tourLengthData,
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    fill: false
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    x: {
+                        display: true,
+                        title: {
+                            display: true,
+                            text: 'Generationen'
+                        }
+                    },
+                    y: {
+                        display: true,
+                        title: {
+                            display: true,
+                            text: 'Tour Länge'
+                        }
+                    }
                 }
             }
+        });
+    }
+
+    function updateChart() {
+        tourLengthData.push(tourLength);
+        generationData.push(generations);
+        tourLengthChart.update();
+    }
+
+    function draw() {
+        background(255);
+
+        if (optimizationStarted && showStepByStep) {
+            performStepByStepGA();
         }
 
+        bestEver.forEach(city => {
+            let mappedX = map(city.x, xMin, xMax, 20, width - 20);
+            let mappedY = map(city.y, yMin, yMax, 20, height - 20);
+            fill(0);
+            ellipse(mappedX, mappedY, 4, 4);
+        });
 
+        stroke(0);
+        strokeWeight(2);
+        noFill();
+        beginShape();
+        bestEver.forEach(city => {
+            let mappedX = map(city.x, xMin, xMax, 20, width - 20);
+            let mappedY = map(city.y, yMin, yMax, 20, height - 20);
+            vertex(mappedX, mappedY);
+        });
+        endShape();
 
-        // From ChatGPT i did it myself above with some stuff, but it should work
-        // Fill the rest of the child with cities from parent2, skipping already inserted
-        /*
-        let currentIndex = (point2 + 1) % n; // Start from the next position after the copied segment
-        for (let i = 0; i < n; i++) {
-            const parent2Index = (point2 + 1 + i) % n;
-            const city = parent2[parent2Index];
-            if (!inserted[city]) {
-                child[currentIndex] = city;
-                inserted[city] = true;
-                currentIndex = (currentIndex + 1) % n;
+        // Draw final connection to close the tour
+        if (bestEver.length > 1) {
+            let firstCity = bestEver[0];
+            let lastCity = bestEver[bestEver.length - 1];
+            let mappedX1 = map(firstCity.x, xMin, xMax, 20, width - 20);
+            let mappedY1 = map(firstCity.y, yMin, yMax, 20, height - 20);
+            let mappedX2 = map(lastCity.x, xMin, xMax, 20, width - 20);
+            let mappedY2 = map(lastCity.y, yMin, yMax, 20, height - 20);
+            line(mappedX1, mappedY1, mappedX2, mappedY2);
+        }
+
+        tourLength = calculateTourLength(bestEver);
+        document.getElementById('tourLength').innerText = `Tour Länge: ${tourLength.toFixed(2)}`;
+        document.getElementById('generationCount').innerText = `Anzahl der Generationen: ${generations}`;
+
+        updateChart();
+    }
+
+    function performStepByStepGA() {
+        nextGeneration();
+    }
+
+    function performCompleteGA() {
+        for (let i = 0; i < 1000; i++) {
+            nextGeneration();
+        }
+    }
+
+    function nextGeneration() {
+        let newPopulation = [];
+        for (let i = 0; i < population.length; i++) {
+            let parentA = selectParent();
+            let parentB = selectParent();
+            let child = crossover(parentA, parentB);
+            mutate(child);
+            newPopulation.push(child);
+        }
+        population = newPopulation;
+        evaluatePopulation();
+        generations++;
+    }
+
+    function selectParent() {
+        // Tournament selection
+        let tournamentSize = 5;
+        let best = null;
+        for (let i = 0; i < tournamentSize; i++) {
+            let ind = floor(random(population.length));
+            let candidate = population[ind];
+            if (best === null || calculateTourLength(candidate) < calculateTourLength(best)) {
+                best = candidate;
             }
         }
+        return best;
+    }
 
-         */
+    function crossover(parentA, parentB) {
+        let start = floor(random(parentA.length));
+        let end = floor(random(start + 1, parentA.length));
+        let child = parentA.slice(start, end);
 
+        for (let i = 0; i < parentB.length; i++) {
+            let city = parentB[i];
+            if (!child.includes(city)) {
+                child.push(city);
+            }
+        }
         return child;
     }
 
-
-    function selectParents() {
-        // Normalize fitness values
-        let sum = fitness.reduce((acc, val) => acc + val, 0);
-        let normalizedFitness = fitness.map(f => f / sum);
-
-        let parents = [];
-        for (let i = 0; i < parentSelectionSize; i++) {
-            parents.push(pickOne(population, normalizedFitness));
-        }
-        return parents;
-    }
-
-    function mutate(individual, mutationRate) {
-        for (let i = 0; i < individual.length; i++) {
+    function mutate(tour) {
+        for (let i = 0; i < tour.length; i++) {
             if (random(1) < mutationRate) {
-                let indexA = floor(random(individual.length));
-                let indexB = (indexA + 1) % individual.length;
-                swap(individual, indexA, indexB); // Implement swap function
+                let j = floor(random(tour.length));
+                [tour[i], tour[j]] = [tour[j], tour[i]];
             }
         }
     }
 
+    function evaluatePopulation() {
+        for (let i = 0; i < population.length; i++) {
+            let tour = population[i];
+            let d = calculateTourLength(tour);
+            if (d < calculateTourLength(bestEver)) {
+                bestEver = tour;
+            }
+        }
+    }
+
+    function calculateTourLength(tour) {
+        let totalDist = 0;
+        for (let i = 0; i < tour.length - 1; i++) {
+            totalDist += dist(tour[i].x, tour[i].y, tour[i + 1].x, tour[i + 1].y);
+        }
+        totalDist += dist(tour[tour.length - 1].x, tour[tour.length - 1].y, tour[0].x, tour[0].y);
+        return totalDist;
+    }
 
 </script>
+</body>
 </html>
