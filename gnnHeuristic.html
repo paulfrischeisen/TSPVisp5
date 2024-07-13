@@ -5,7 +5,7 @@
     <title>Travelling Salesman Problem Visualisierung - GNN</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet"> <!-- Überprüfen ob Bootstrap korrekt eingebunden ist -->
     <style>
         body {
             padding: 20px;
@@ -14,17 +14,13 @@
             display: flex;
             flex-direction: column;
             gap: 10px;
-            max-width: 200px;
+            max-width: 300px;
             margin-right: 20px;
         }
         #canvas-container {
             display: flex;
             flex-direction: column;
             align-items: center;
-        }
-        #chart-container {
-            width: 1000px;
-            height: 400px;
         }
         #canvas-holder {
             width: 1000px;
@@ -34,8 +30,9 @@
 </head>
 <body>
 <div class="container-fluid">
+    <h1>TSP Visualisierung - Greedy Nearest Neighbor</h1>
     <div class="row">
-        <div class="col-md-3">
+        <div class="col-12 col-md-2">
             <div id="controls" class="form-group">
                 <label for="tspSelect">Wähle eine TSP Datei:</label>
                 <select id="tspSelect" class="form-control">
@@ -50,21 +47,19 @@
                 <div id="info" class="mt-3">
                     <div id="tourLength">Tour Länge: N/A</div>
                 </div>
+                <button id="startButton" class="btn btn-primary mt-3">Animation Starten</button>
             </div>
         </div>
-        <div class="col-md-9" id="canvas-container">
+        <div class="col-12 col-md-10" id="canvas-container">
             <div id="canvas-holder">
                 <script>
                     function setup() {
-                        let canvas = createCanvas(1000, 800);
+                        let canvas = createCanvas(1200, 800);
                         canvas.parent('canvas-holder');
                         background(255);
                         noLoop();
                     }
                 </script>
-            </div>
-            <div id="chart-container" class="mt-4">
-                <canvas id="tourLengthChart"></canvas>
             </div>
         </div>
     </div>
@@ -73,6 +68,7 @@
 <script>
     let cities = [];
     let bestEver = [];
+    let unvisitedCities = [];
     let citiesVisited = 0;
     let frameCounter = 0;
     let xMin, xMax, yMin, yMax;
@@ -85,6 +81,7 @@
     };
 
     document.getElementById('tspSelect').addEventListener('change', handleSelectChange);
+    document.getElementById('startButton').addEventListener('click', startAnimation);
 
     function handleSelectChange(event) {
         const selectedFile = event.target.value;
@@ -135,32 +132,25 @@
     }
 
     function setupSketch() {
-        createCanvas(1000, 800);
+        let canvas = createCanvas(1000, 800);
+        canvas.parent('canvas-holder');
         background(255);
+        drawCities();
+        noLoop();
+    }
+
+    function startAnimation() {
         loop();
     }
 
     function setup() {
         // Initial setup to create canvas, called once
-        noLoop();  // No looping until file is loaded
+        noLoop();  // No looping until file is loaded and animation is started
     }
 
     function draw() {
         background(255);
-
-        fill(0);
-        cities.forEach(city => {
-            let mappedX = map(city.x, xMin, xMax, 20, width - 20);
-            let mappedY = map(city.y, yMin, yMax, 20, height - 20);
-            ellipse(mappedX, mappedY, 4, 4);
-        });
-
-        bestEver.forEach(city => {
-            let mappedX = map(city.x, xMin, xMax, 20, width - 20);
-            let mappedY = map(city.y, yMin, yMax, 20, height - 20);
-            fill(0);
-            ellipse(mappedX, mappedY, 4, 4);
-        });
+        drawCities();
 
         if (unvisitedCities.length > 0 && frameCounter >= 10) {
             findAndDrawNextClosestCity();
@@ -189,6 +179,22 @@
             vertex(mappedX, mappedY);
         });
         endShape();
+    }
+
+    function drawCities() {
+        fill(0);
+        cities.forEach(city => {
+            let mappedX = map(city.x, xMin, xMax, 20, width - 20);
+            let mappedY = map(city.y, yMin, yMax, 20, height - 20);
+            ellipse(mappedX, mappedY, 4, 4);
+        });
+
+        bestEver.forEach(city => {
+            let mappedX = map(city.x, xMin, xMax, 20, width - 20);
+            let mappedY = map(city.y, yMin, yMax, 20, height - 20);
+            fill(0);
+            ellipse(mappedX, mappedY, 4, 4);
+        });
     }
 
     function findAndDrawNextClosestCity() {
