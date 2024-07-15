@@ -37,11 +37,13 @@
                 <label for="tspSelect">Wähle eine TSP Datei:</label>
                 <select id="tspSelect" class="form-control">
                     <option value="" disabled selected>Wähle eine TSP Datei</option>
-                    <option value="ulysses16.tsp">Ulysses 16</option>
-                    <option value="berlin52.tsp">Berlin 52</option>
-                    <option value="bier127.tsp">Bier 127</option>
-                    <option value="a280.tsp">A 280</option>
-                    <option value="rl1304.tsp">RL 1304</option>
+                    <option value="ulysses16.tsp">Odyssey of Ulysses 16</option>
+                    <option value="bayg29.tsp">Cities in Bavaria 29</option>
+                    <option value="berlin52.tsp">Locations in Berlin 52</option>
+                    <option value="st70.tsp">City Problem 70</option>
+                    <option value="pr76.tsp">City Problem 76</option>
+                    <option value="bier127.tsp">Biergärten Augsburg 127</option>
+                    <option value="a280.tsp">Drilling Problem 280</option>
                 </select>
 
                 <div id="info" class="mt-3">
@@ -74,10 +76,12 @@
     let xMin, xMax, yMin, yMax;
     const filePaths = {
         'ulysses16.tsp': 'TSPData/ulysses16.tsp',
+        'bayg29.tsp': 'TSPData/bayg29.tsp',
         'berlin52.tsp': 'TSPData/berlin52.tsp',
+        'st70.tsp': 'TSPData/st70.tsp',
+        'pr76.tsp': 'TSPData/pr76.tsp',
         'bier127.tsp': 'TSPData/bier127.tsp',
         'a280.tsp': 'TSPData/a280.tsp',
-        'rl1304.tsp': 'TSPData/rl1304.tsp'
     };
 
     document.getElementById('tspSelect').addEventListener('change', handleSelectChange);
