@@ -56,6 +56,12 @@
                 <label for="mutationRateInput">Mutationsrate:</label>
                 <input type="number" id="mutationRateInput" class="form-control" step="0.01" value="0.01">
 
+                <label for="tournamentSizeInput">Größe der Tournament-Selection:</label>
+                <input type="number" id="tournamentSizeInput" class="form-control" value="5">
+
+                <label for="generationsInput">Anzahl der Generationen (wenn keine Schritt-für-Schritt Optimierung):</label>
+                <input type="number" id="generationsInput" class="form-control" value="500">
+
                 <div class="form-check">
                     <label for="stepByStep" class="form-check-label">Schritt-für-Schritt-Visualisierung:</label>
                     <input type="checkbox" id="stepByStep" class="form-check-input ml-2">
@@ -94,6 +100,8 @@
     let popSize = 100;
     let mutationRate = 0.01;
     let generations = 0;
+    let tournamentSize = 5;
+    let completeGenerations = 500;
     let xMin, xMax, yMin, yMax;
     let tourLength = 0;
     let showStepByStep = false;
@@ -116,6 +124,8 @@
     document.getElementById('startButton').addEventListener('click', startOptimization);
     document.getElementById('popSizeInput').addEventListener('change', updatePopSize);
     document.getElementById('mutationRateInput').addEventListener('change', updateMutationRate);
+    document.getElementById('tournamentSizeInput').addEventListener('change', updateTournamentSize);
+    document.getElementById('generationsInput').addEventListener('change', updateCompleteGenerations);
 
     function handleSelectChange(event) {
         const selectedFile = event.target.value;
@@ -146,6 +156,14 @@
 
     function updateMutationRate() {
         mutationRate = document.getElementById('mutationRateInput').value;
+    }
+
+    function updateTournamentSize() {
+        tournamentSize = document.getElementById('tournamentSizeInput').value;
+    }
+
+    function updateCompleteGenerations() {
+        completeGenerations = document.getElementById('generationsInput').value;
     }
 
     function loadTSPFile(filepath) {
@@ -296,7 +314,7 @@
     }
 
     function performCompleteGA() {
-        for (let i = 0; i < 500; i++) {
+        for (let i = 0; i < completeGenerations; i++) {
             nextGeneration();
         }
     }
@@ -317,7 +335,6 @@
 
     function selectParent() {
         // Tournament selection
-        let tournamentSize = 5;
         let best = null;
         for (let i = 0; i < tournamentSize; i++) {
             let ind = floor(random(population.length));
