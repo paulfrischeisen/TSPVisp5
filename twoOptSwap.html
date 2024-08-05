@@ -82,17 +82,18 @@
 </div>
 
 <script>
-    let cities = [];
-    let bestEver = [];
-    let swapCounter = 0;
-    let xMin, xMax, yMin, yMax;
-    let i = 1, k = 2, improved = false;
-    let tourLength = 0;
-    let showStepByStep = false;
-    let optimizationStarted = false;
-    let tourLengthData = [];
-    let swapCountData = [];
-    let tourLengthChart;
+    // Globale Variablen
+    let cities = [];  // Liste der Städte
+    let bestEver = [];  // Beste gefundene Tour
+    let swapCounter = 0;  // Zähler für die Anzahl der Swaps
+    let xMin, xMax, yMin, yMax;  // Koordinaten-Grenzen der Städte
+    let i = 1, k = 2, improved = false;  // Indizes und Verbesserungs-Flag für den 2-Opt-Algorithmus
+    let tourLength = 0;  // Länge der aktuellen Tour
+    let showStepByStep = false;  // Flag für die Schritt-für-Schritt-Visualisierung
+    let optimizationStarted = false;  // Flag, ob die Optimierung gestartet wurde
+    let tourLengthData = [];  // Daten für die Tourlänge im Diagramm
+    let swapCountData = [];  // Daten für die Anzahl der Swaps im Diagramm
+    let tourLengthChart;  // Referenz auf das Tourlängendiagramm
 
     const filePaths = {
         'ulysses16.tsp': 'TSPData/ulysses16.tsp',
@@ -104,35 +105,39 @@
         'a280.tsp': 'TSPData/a280.tsp',
     };
 
+    // Event-Listener
     document.getElementById('tspSelect').addEventListener('change', handleSelectChange);
     document.getElementById('startButton').addEventListener('click', startOptimization);
 
+    // Funktion, die ausgeführt wird, wenn eine TSP-Datei ausgewählt wird
     function handleSelectChange(event) {
         const selectedFile = event.target.value;
         const filePath = filePaths[selectedFile];
         loadTSPFile(filePath);
-        showStepByStep = document.getElementById('stepByStep').checked;
-        optimizationStarted = false;
-        tourLengthData = [];
-        swapCountData = [];
+        showStepByStep = document.getElementById('stepByStep').checked;  // Überprüfe, ob die Schritt-für-Schritt-Visualisierung aktiviert ist
+        optimizationStarted = false;  // Setze das Flag für die Optimierung zurück
+        tourLengthData = [];  // Leere die Daten für die Tourlänge
+        swapCountData = [];  // Leere die Daten für die Anzahl der Swaps
         if (tourLengthChart) {
-            tourLengthChart.destroy();
+            tourLengthChart.destroy();  // Zerstöre das alte Diagramm, falls vorhanden
         }
-        setupChart();
-        noLoop();
+        setupChart();  // Initialisiere das Diagramm
+        noLoop();  // Stoppe die Animation bis sie manuell gestartet wird
     }
 
+    // Funktion zum Starten der Optimierung
     function startOptimization() {
         optimizationStarted = true;
         if (showStepByStep) {
-            frameRate(1000);
-            loop();
+            frameRate(1000);  // Setze die Frame-Rate für die Schritt-für-Schritt-Visualisierung
+            loop();  // Starte die p5.js-Zeichenfunktion
         } else {
-            performComplete2Opt();
-            draw();
+            performComplete2Opt();  // Führe die komplette 2-Opt-Optimierung durch
+            draw();  // Zeichne das Ergebnis
         }
     }
 
+    // Laden der TSP-Datei, ausführlich beschrieben in gnnHeuristik
     function loadTSPFile(filepath) {
         fetch(filepath)
             .then(response => response.text())
@@ -175,7 +180,9 @@
         yMin = Math.min(...cities.map(city => city.y));
         yMax = Math.max(...cities.map(city => city.y));
     }
+    // Bis hier findet sich eine ausführliche Beschreibung des Codes in gnnHeuristik
 
+    // Funktion zur Initialisierung des Diagramms
     function setupChart() {
         const ctx = document.getElementById('tourLengthChart').getContext('2d');
         tourLengthChart = new Chart(ctx, {
@@ -211,12 +218,14 @@
         });
     }
 
+    // Funktion zur Aktualisierung des Diagramms
     function updateChart() {
         tourLengthData.push(tourLength);
         swapCountData.push(swapCounter);
         tourLengthChart.update();
     }
 
+    // Haupt-Zeichenfunktion, die bei jedem Frame aufgerufen wird
     function draw() {
         background(255);
         if (optimizationStarted && showStepByStep) {
@@ -257,14 +266,16 @@
         updateChart();
     }
 
+    // Funktion zur schrittweisen Durchführung der 2-Opt-Optimierung
     function performStepByStep2Opt() {
         if (i < bestEver.length - 1) {
             if (k < bestEver.length) {
-                let newTour = twoOptSwap(bestEver, i, k);
+                let newTour = twoOptSwap(bestEver, i, k);  // Führe einen 2-Opt-Swap durch
                 if (calculateTourLength(newTour) < calculateTourLength(bestEver)) {
-                    bestEver = newTour;
-                    improved = true;
-                    swapCounter++;
+                    bestEver = newTour;  // Aktualisiere die beste Tour
+                    improved = true;  // Setze das Verbesserungs-Flag
+                    swapCounter++;  // Erhöhe den Swap-Zähler
+                    // Aktualisierung der Anzeigen
                     document.getElementById('swapCount').innerText = `Anzahl der Swaps: ${swapCounter}`;
                     tourLength = calculateTourLength(bestEver);
                     document.getElementById('tourLength').innerText = `Tour Länge: ${tourLength.toFixed(2)}`;
@@ -285,10 +296,11 @@
         if (i >= bestEver.length - 1) {
             tourLength = calculateTourLength(bestEver);
             document.getElementById('tourLength').innerText = `Tour Länge: ${tourLength.toFixed(2)}`;
-            noLoop();
+            noLoop();  // Stoppe die Animation, wenn keine Verbesserungen mehr möglich sind
         }
     }
 
+    // Funktion zur vollständigen Durchführung der 2-Opt-Optimierung. Einziger Unterschied - while statt if
     function performComplete2Opt() {
         while (i < bestEver.length - 1) {
             if (k < bestEver.length) {
@@ -317,11 +329,13 @@
         document.getElementById('tourLength').innerText = `Tour Länge: ${tourLength.toFixed(2)}`;
     }
 
+    // Funktion zur Durchführung eines 2-Opt-Swaps
     function twoOptSwap(tour, i, k) {
         let newTour = tour.slice(0, i).concat(tour.slice(i, k + 1).reverse()).concat(tour.slice(k + 1));
         return newTour;
     }
 
+    // Funktion zur Berechnung der Gesamtlänge der Tour
     function calculateTourLength(tour) {
         let totalDist = 0;
         for (let i = 0; i < tour.length - 1; i++) {
