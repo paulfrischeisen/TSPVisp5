@@ -3,10 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <title>Travelling Salesman Problem Visualisierung - GNN</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet"> <!-- Überprüfen ob Bootstrap korrekt eingebunden ist -->
+    <!-- Einbindung von externen Bibliotheken und CSS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script> <!-- Bibliothek für kreative Programmierung -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> <!-- Bibliothek für Diagramme -->
+    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet"> <!-- Bootstrap CSS -->
     <style>
+        /* CSS für das Layout und die Darstellung */
         body {
             padding: 20px;
         }
@@ -32,6 +34,7 @@
 <div class="container-fluid">
     <h1>TSP Visualisierung - Greedy Nearest Neighbor</h1>
     <div class="row">
+        <!-- Bedienfeld für die Auswahl der TSP-Datei und den Start der Animation -->
         <div class="col-12 col-md-2">
             <div id="controls" class="form-group">
                 <label for="tspSelect">Wähle eine TSP Datei:</label>
@@ -52,9 +55,11 @@
                 <button id="startButton" class="btn btn-primary mt-3">Animation Starten</button>
             </div>
         </div>
+        <!-- Bereich für die Canvas-Darstellung -->
         <div class="col-12 col-md-10" id="canvas-container">
             <div id="canvas-holder">
                 <script>
+                    // Funktion, die beim Laden der Seite ausgeführt wird, um die Canvas zu erstellen
                     function setup() {
                         let canvas = createCanvas(1200, 800);
                         canvas.parent('canvas-holder');
@@ -68,12 +73,13 @@
 </div>
 
 <script>
-    let cities = [];
-    let bestEver = [];
-    let unvisitedCities = [];
-    let citiesVisited = 0;
-    let frameCounter = 0;
-    let xMin, xMax, yMin, yMax;
+    // Globale Variablen
+    let cities = [];  // Liste der Städte
+    let bestEver = [];  // Beste gefundene Tour
+    let unvisitedCities = [];  // Liste der unbesuchten Städte
+    let citiesVisited = 0;  // Anzahl der besuchten Städte
+    let frameCounter = 0;  // Zähler für die Frame-Rate-Steuerung
+    let xMin, xMax, yMin, yMax;  // Koordinaten-Grenzen der Städte
     const filePaths = {
         'ulysses16.tsp': 'TSPData/ulysses16.tsp',
         'bayg29.tsp': 'TSPData/bayg29.tsp',
@@ -84,15 +90,18 @@
         'a280.tsp': 'TSPData/a280.tsp',
     };
 
+    // Event-Listener
     document.getElementById('tspSelect').addEventListener('change', handleSelectChange);
     document.getElementById('startButton').addEventListener('click', startAnimation);
 
+    // Funktion, die ausgeführt wird, wenn eine TSP-Datei ausgewählt wird
     function handleSelectChange(event) {
         const selectedFile = event.target.value;
         const filePath = filePaths[selectedFile];
         loadTSPFile(filePath);
     }
 
+    // Funktion zum Laden und Verarbeiten der TSP-Datei
     function loadTSPFile(filepath) {
         fetch(filepath)
             .then(response => response.text())
@@ -102,32 +111,34 @@
             });
     }
 
+    // Funktion zum Laden der Städte aus den TSP-Daten
     function loadCities(data) {
-        let lines = data.trim().split('\n');
-        let coordSection = false;
+        let lines = data.trim().split('\n');  // Teile die Daten in Zeilen auf
+        let coordSection = false;  // Kontrollvariable für den Koordinatenabschnitt
         cities = [];
         unvisitedCities = [];
         for (let line of lines) {
             line = line.trim();
             if (line === 'NODE_COORD_SECTION') {
-                coordSection = true;
+                coordSection = true;  // Beginn des Koordinatenabschnitts
                 continue;
             }
             if (line === 'EOF' || line === '' || !coordSection) {
-                coordSection = false;
+                coordSection = false;  // Ende des Koordinatenabschnitts
                 continue;
             }
-            let parts = line.split(/\s+/);
-            let v = createVector(parseFloat(parts[1]), parseFloat(parts[2]));
-            cities.push(v);
-            unvisitedCities.push(v);
+            let parts = line.split(/\s+/);  // Teile die Zeile in Teile auf
+            let v = createVector(parseFloat(parts[1]), parseFloat(parts[2]));  // Erstelle einen Vektor für die Stadt
+            cities.push(v);  // Füge die Stadt zur Liste hinzu
+            unvisitedCities.push(v);  // Füge die Stadt zur Liste der unbesuchten Städte hinzu
         }
-        bestEver = [cities[0]];
-        unvisitedCities.splice(0, 1);  // Remove the first city from the unvisited list
-        citiesVisited = 0;
-        calculateBounds();
+        bestEver = [cities[0]];  // Beginne die beste Tour mit der ersten Stadt
+        unvisitedCities.splice(0, 1);  // Entferne die erste Stadt aus der Liste der unbesuchten Städte
+        citiesVisited = 0;  // Setze die Anzahl der besuchten Städte zurück
+        calculateBounds();  // Berechne die Grenzen der Koordinaten
     }
 
+    // Funktion zur Berechnung der minimalen und maximalen Koordinaten der Städte
     function calculateBounds() {
         xMin = Math.min(...cities.map(city => city.x));
         xMax = Math.max(...cities.map(city => city.x));
@@ -135,23 +146,21 @@
         yMax = Math.max(...cities.map(city => city.y));
     }
 
+    // Funktion zur Initialisierung des Sketches
     function setupSketch() {
         let canvas = createCanvas(1000, 800);
         canvas.parent('canvas-holder');
         background(255);
         drawCities();
-        noLoop();
+        noLoop();  // Stoppe die Animation bis sie manuell gestartet wird
     }
 
+    // Funktion zum Starten der Animation
     function startAnimation() {
-        loop();
+        loop();  // Starte die p5.js-Zeichenfunktion
     }
 
-    function setup() {
-        // Initial setup to create canvas, called once
-        noLoop();  // No looping until file is loaded and animation is started
-    }
-
+    // Haupt-Zeichenfunktion, die bei jedem Frame aufgerufen wird
     function draw() {
         background(255);
         drawCities();
@@ -173,6 +182,7 @@
             document.getElementById('tourLength').innerText = `Tour Länge: ${tourLength.toFixed(2)}`;
         }
 
+        // Zeichne die bisher beste Tour
         stroke(0);
         strokeWeight(2);
         noFill();
@@ -185,12 +195,13 @@
         endShape();
     }
 
+    // Funktion zum Zeichnen der Städte
     function drawCities() {
         fill(0);
         cities.forEach(city => {
-            let mappedX = map(city.x, xMin, xMax, 20, width - 20);
-            let mappedY = map(city.y, yMin, yMax, 20, height - 20);
-            ellipse(mappedX, mappedY, 4, 4);
+            let mappedX = map(city.x, xMin, xMax, 20, width - 20);  // Skalierung der x-Koordinate
+            let mappedY = map(city.y, yMin, yMax, 20, height - 20);  // Skalierung der y-Koordinate
+            ellipse(mappedX, mappedY, 4, 4);  // Zeichne die Stadt als Punkt
         });
 
         bestEver.forEach(city => {
@@ -201,26 +212,28 @@
         });
     }
 
+    // Funktion zum Finden und Zeichnen der nächstgelegenen Stadt
     function findAndDrawNextClosestCity() {
         let lastCity = bestEver[bestEver.length - 1];
         let recordDistance = Infinity;
         let closestCityIndex = -1;
 
         for (let i = 0; i < unvisitedCities.length; i++) {
-            let d = dist(lastCity.x, lastCity.y, unvisitedCities[i].x, unvisitedCities[i].y);
+            let d = dist(lastCity.x, lastCity.y, unvisitedCities[i].x, unvisitedCities[i].y);  // Berechne die Distanz
             if (d < recordDistance) {
-                recordDistance = d;
-                closestCityIndex = i;
+                recordDistance = d;  // Aktualisiere die kürzeste Distanz
+                closestCityIndex = i;  // Aktualisiere den Index der nächstgelegenen Stadt
             }
         }
 
         if (closestCityIndex >= 0) {
-            bestEver.push(unvisitedCities[closestCityIndex]);
-            unvisitedCities.splice(closestCityIndex, 1);
-            citiesVisited++;
+            bestEver.push(unvisitedCities[closestCityIndex]);  // Füge die nächstgelegene Stadt zur Tour hinzu
+            unvisitedCities.splice(closestCityIndex, 1);  // Entferne die Stadt aus der Liste der unbesuchten Städte
+            citiesVisited++;  // Erhöhe die Anzahl der besuchten Städte
         }
     }
 
+    // Funktion zum Zeichnen der letzten Verbindung zur ersten Stadt
     function drawFinalConnection() {
         stroke(0);
         strokeWeight(2);
@@ -233,6 +246,7 @@
         line(mappedX1, mappedY1, mappedX2, mappedY2);
     }
 
+    // Funktion zur Berechnung der Gesamtlänge der Tour
     function calculateTourLength(tour) {
         let totalDist = 0;
         for (let i = 0; i < tour.length - 1; i++) {
